@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # 1. The PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: timeblocker
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Mount the schema to automatically create the table on first run
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # 2. The PHP Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    # We pass the DB credentials as environment variables for cleaner code
+    environment:
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASS=yourpassword
+      - DB_NAME=timeblocker
+
+  # 3. The React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+# Define a named volume to persist database data even if the container stops
+volumes:
+  pgdata:
